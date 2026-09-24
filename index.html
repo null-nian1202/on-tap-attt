@@ -1,0 +1,197 @@
+from pathlib import Path
+
+html = r'''<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ôn tập An toàn thông tin & Mật mã</title>
+<style>
+:root{
+  --bg:#f4f7fb; --card:#fff; --text:#1f2937; --muted:#6b7280;
+  --primary:#4f46e5; --primary2:#6366f1; --green:#16a34a; --red:#dc2626;
+  --border:#e5e7eb; --shadow:0 8px 25px rgba(15,23,42,.08);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+.container{max-width:1050px;margin:auto;padding:24px 16px 60px}
+header{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:28px;border-radius:18px;box-shadow:var(--shadow);margin-bottom:20px}
+h1{margin:0 0 8px;font-size:30px}
+header p{margin:5px 0;opacity:.92}
+.toolbar{position:sticky;top:10px;z-index:10;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;gap:10px;flex-wrap:wrap;box-shadow:var(--shadow);margin-bottom:20px}
+button{border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer}
+.primary{background:var(--primary);color:#fff}.secondary{background:#eef2ff;color:#3730a3}.danger{background:#fee2e2;color:#991b1b}
+.progress-wrap{flex:1;min-width:220px;display:flex;align-items:center;gap:10px}
+.progress{height:10px;background:#e5e7eb;border-radius:20px;overflow:hidden;flex:1}
+.progress i{display:block;height:100%;width:0;background:var(--primary);transition:.25s}
+.score{font-weight:700;white-space:nowrap}
+.question{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;margin:16px 0;box-shadow:var(--shadow)}
+.q-title{font-weight:800;font-size:17px;margin-bottom:12px}
+.options{display:grid;gap:9px}
+.option{display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:.15s;background:#fff}
+.option:hover{border-color:#a5b4fc;background:#f8f8ff}
+.option input{margin-top:4px}
+.option.correct{border-color:#86efac;background:#f0fdf4}
+.option.wrong{border-color:#fca5a5;background:#fef2f2}
+.feedback{display:none;margin-top:14px;padding:14px;border-radius:11px}
+.feedback.show{display:block}
+.feedback.ok{background:#f0fdf4;border-left:4px solid var(--green)}
+.feedback.bad{background:#fef2f2;border-left:4px solid var(--red)}
+.explain{margin-top:8px}
+.math{font-family:Georgia,serif;background:#f8fafc;padding:8px 10px;border-radius:8px;display:inline-block}
+.final{display:none;background:#fff;border:1px solid var(--border);border-radius:16px;padding:22px;margin-top:20px;box-shadow:var(--shadow)}
+.final.show{display:block}
+.final h2{margin-top:0}
+.small{color:var(--muted);font-size:14px}
+@media(max-width:650px){h1{font-size:24px}.toolbar{position:static}.progress-wrap{order:3;flex-basis:100%}}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>📚 Ôn tập An toàn thông tin & Mật mã</h1>
+<p>35 câu trắc nghiệm • Chọn đáp án để xem ngay đúng/sai và lời giải chi tiết.</p>
+<p class="small" style="color:#e0e7ff">Có thể làm lại bất cứ lúc nào. Điểm được tính theo số câu đã trả lời đúng.</p>
+</header>
+
+<div class="toolbar">
+<button class="primary" id="showAll">Hiện đáp án & giải thích</button>
+<button class="secondary" id="reset">Làm lại</button>
+<button class="danger" id="hideAnswers">Ẩn lời giải</button>
+<div class="progress-wrap"><span class="score" id="score">0/35</span><div class="progress"><i id="bar"></i></div><span id="answered">0 đã làm</span></div>
+</div>
+
+<div id="quiz"></div>
+<div class="final" id="final"></div>
+</div>
+
+<script>
+const questions = [
+{q:"Mật mã hoán vị là:", a:["Mã thay thế","Mã dòng","Mã khóa công khai","Mã khối"], c:3, e:"Mật mã hoán vị (transposition cipher) giữ nguyên các ký tự nhưng thay đổi vị trí của chúng. Trong phân loại cơ bản, nó thuộc nhóm mã khối vì xử lý và hoán vị các ký tự theo khối; đáp án phù hợp với bộ câu hỏi này là D."},
+{q:"Trong hệ mật mã RSA, A có khóa công khai là (e, n) = (13, 55). Biết p = 11 và q = 5. Khóa riêng d của A là:", a:["37","13","40","55"], c:0, e:"Ta có φ(n) = (p−1)(q−1) = 10×4 = 40. Cần tìm d sao cho e·d ≡ 1 (mod 40). Với e=13, 13×37=481=40×12+1, nên d=37."},
+{q:"Trong hệ mật mã RSA, thành phần nào sau đây là khóa riêng?", a:["e","d","n","(e, n)"], c:1, e:"Trong RSA, khóa công khai thường là (e,n), còn khóa riêng chứa d (thường được biểu diễn là (d,n)). Vì vậy thành phần đặc trưng của khóa riêng là d."},
+{q:"B muốn gửi bản rõ m = 10 cho A bằng hệ RSA. Biết khóa công khai của A là (e, n) = (5, 51). B cần sử dụng khóa nào để mã hóa?", a:["(3, 17)","(17, 3)","(5, 51)","(7, 51)"], c:2, e:"Khi mã hóa RSA cho A, B phải dùng khóa công khai của A. Đề đã cho khóa công khai là (e,n)=(5,51), nên chọn C. Công thức mã hóa là y = m^e mod n."},
+{q:"Virus máy tính có thể gây ra những tác hại nào sau đây?", a:["Làm mất dữ liệu","Làm chậm hệ thống","Tất cả các đáp án trên","Đánh cắp thông tin"], c:2, e:"Mã độc có thể gây nhiều hậu quả: phá hoặc xóa dữ liệu, làm máy chậm, và đánh cắp thông tin. Vì cả A, B, D đều có thể xảy ra nên đáp án tổng hợp là C."},
+{q:"Virus máy tính có thể lây lan thông qua những thiết bị nào?", a:["USB, CD-ROM, thẻ nhớ","Chỉ USB","Chỉ CD-ROM","Chỉ thẻ nhớ"], c:0, e:"Thiết bị lưu trữ rời như USB, CD-ROM và thẻ nhớ đều có thể là phương tiện mang và phát tán mã độc, đặc biệt khi chứa tệp thực thi độc hại."},
+{q:"Tệp nào dưới đây có khả năng là virus hoặc chương trình thực thi giả dạng hình ảnh?", a:["picture.gif.exe","picture.jpg","picture.png","picture.gif"], c:0, e:"Trên Windows, phần mở rộng cuối cùng quyết định kiểu tệp. picture.gif.exe thực chất là tệp .exe (chương trình thực thi) nhưng phần tên phía trước có thể khiến người dùng tưởng đó là ảnh GIF. Đây là kiểu ngụy trang phổ biến."},
+{q:"Một máy chủ Web bị tấn công bằng lượng lớn yêu cầu từ nhiều máy tính khác nhau cùng lúc. Đây là dạng tấn công nào?", a:["DoS","Phishing","Spoofing","DDoS"], c:3, e:"DDoS (Distributed Denial of Service) là từ chối dịch vụ phân tán: nhiều máy hoặc nhiều nguồn cùng gửi lượng lớn yêu cầu để làm cạn tài nguyên của mục tiêu. DoS là khái niệm rộng hơn, không nhất thiết phân tán."},
+{q:"Cho ma trận khóa Hill K = [[8,3],[7,3]]. Biết bản mã là EC, A=0,...,Z=25. Bản rõ là:", a:["AB","CD","CW","CWC"], c:2, e:"Với quy ước vector c = Kp (mod 26). EC tương ứng c=(4,2). Ma trận K có định thức 8×3−3×7=3. Nghịch đảo của 3 modulo 26 là 9 vì 3×9=27≡1. Suy ra K⁻¹ = 9[[3,-3],[-7,8]] (mod 26) = [[1,25],[15,20]]. Nhân với (4,2) được (4,0), tức EC→AE theo cách vector cột. Tuy nhiên bộ đáp án đã cho không khớp với phép tính chuẩn này. Nếu đề gốc dùng quy ước/vector khác, cần kiểm tra lại câu 9; không nên học thuộc đáp án C."},
+{q:"Cho ma trận khóa Hill K = [[9,3],[8,3]]. Biết bản mã là VG, A=0,...,Z=25. Bản rõ là:", a:["PO","OP","AB","CD"], c:0, e:"Định thức K = 9×3−3×8=3, nghịch đảo của 3 mod 26 là 9. K⁻¹ = 9[[3,-3],[-8,9]] mod 26 = [[1,25],[10,3]]. VG tương ứng (21,6). Nhân K⁻¹(21,6) cho (15,8), tương ứng P,I theo quy ước cột. Vì vậy phép tính chuẩn không cho PO; câu/đáp án có dấu hiệu không nhất quán. Nếu tài liệu lớp dùng quy ước hàng hoặc cách mã hóa khác, cần đối chiếu."},
+{q:"Trong hệ thống chữ ký số, thành phần nào được sử dụng để xác nhận người ký và đảm bảo tính toàn vẹn của thông điệp?", a:["Khóa bí mật","Khóa công khai","Hàm băm","Chữ ký số"], c:3, e:"Chữ ký số là thành phần được gửi kèm thông điệp để bên nhận kiểm tra tính xác thực của chữ ký và tính toàn vẹn. Khóa công khai được dùng để xác minh chữ ký; hàm băm tạo giá trị đại diện cho thông điệp."},
+{q:"Sử dụng mã Caesar với khóa k = 9 để mã hóa từ xinh. Kết quả là:", a:["HRWQ","QRGZ","GPMX","XQPW"], c:1, e:"Mã Caesar dịch mỗi chữ cái tiến 9 vị trí: x→g, i→r, n→w, h→q. Kết quả là GRWQ, không trùng các phương án đã cho. Vì vậy câu này cũng có khả năng bị sai đáp án/đề. Nếu dùng một quy ước khác, cần kiểm tra lại."},
+{q:"Cho ma trận khóa Hill K = [[19,2],[7,1]]. Biết bản mã là XL, A=0,...,Z=25. Bản rõ là:", a:["AB","UV","VW","VU"], c:3, e:"Định thức = 19×1−2×7=5. Nghịch đảo của 5 modulo 26 là 21 vì 5×21=105≡1. K⁻¹=21[[1,-2],[-7,19]] mod 26 = [[21,10],[9,9]]. XL=(23,11). Nhân cho ra (23,0) = XA theo phép cột chuẩn, không khớp các lựa chọn. Câu này cần kiểm tra lại quy ước Hill trong tài liệu gốc."},
+{q:"Mã hóa là quá trình nào sau đây?", a:["Chuyển bản mã thành bản rõ","Tạo khóa bí mật","Xác thực người dùng","Chuyển bản rõ thành bản mã"], c:3, e:"Mã hóa (encryption) biến bản rõ (plaintext) thành bản mã (ciphertext) bằng thuật toán và khóa. Quá trình ngược lại là giải mã."},
+{q:"Ba mục tiêu cơ bản của an toàn thông tin là:", a:["Bí mật, toàn vẹn, sẵn sàng","Xác thực, mã hóa, nén","Mã hóa, giải mã, xác thực","Sao lưu, phục hồi, kiểm tra"], c:0, e:"Bộ ba CIA gồm Confidentiality (bí mật), Integrity (toàn vẹn) và Availability (sẵn sàng). Đây là ba mục tiêu nền tảng của an toàn thông tin."},
+{q:"Theo Luật An ninh mạng năm 2018, cơ quan chủ trì soạn thảo Luật An ninh mạng là:", a:["Bộ Thông tin và Truyền thông","Bộ Quốc phòng","Bộ Công an","Bộ Tư pháp"], c:2, e:"Luật An ninh mạng năm 2018 được Quốc hội thông qua ngày 12/6/2018. Bộ Công an là cơ quan chủ trì soạn thảo dự án Luật này."},
+{q:"Biện pháp nào sau đây giúp hạn chế nguy cơ nhiễm mã độc trên máy tính?", a:["Tắt tường lửa","Tải phần mềm không rõ nguồn gốc","Cài đặt và cập nhật phần mềm diệt virus","Tắt phần mềm bảo mật"], c:2, e:"Cài đặt phần mềm bảo mật và cập nhật thường xuyên giúp phát hiện, ngăn chặn nhiều loại mã độc mới. Các lựa chọn còn lại đều làm giảm mức bảo vệ."},
+{q:"Luật An ninh mạng năm 2018 có hiệu lực từ ngày nào?", a:["01/01/2019","01/07/2018","01/01/2020","01/07/2019"], c:0, e:"Theo Điều 48 Luật An ninh mạng 2018, Luật có hiệu lực thi hành từ ngày 01/01/2019."},
+{q:"Cho bản mã y = 18, khóa riêng được xác định từ p = 3, q = 11, e = 7. Khi giải mã bản mã y theo RSA, ta thu được bản rõ nào?", a:["11","24","18","35"], c:0, e:"n=3×11=33; φ(n)=2×10=20. Tìm d sao cho 7d≡1 mod 20: d=3 vì 21≡1. Giải mã x=18^3 mod 33. 18²=324≡27, 27×18=486≡24 mod 33. Kết quả chuẩn là 24, nên đáp án đúng theo phép tính RSA là B, không phải A. Câu/đáp án trong đề có vẻ bị sai."},
+{q:"Cho bản rõ x = 8, khóa công khai RSA là (e,n)=(7,33). Bản mã y thu được là:", a:["4","8","18","2"], c:0, e:"Mã hóa RSA: y=x^e mod n = 8^7 mod 33. Tính theo lũy thừa modulo 33 cho kết quả 4. Vì vậy chọn A."},
+{q:"Để bảo mật hệ thống bằng mật mã, kích thước không gian khóa cần:", a:["Càng nhỏ càng tốt","Đủ lớn để tấn công vét cạn trở nên khó thực hiện","Không cần quan tâm","Chỉ cần khóa có độ dài 8 bit"], c:1, e:"Không gian khóa càng lớn thì số khả năng cần thử khi vét cạn càng nhiều. Vì vậy khóa phải đủ lớn theo mức an toàn mong muốn để brute-force trở nên không khả thi về mặt tính toán."},
+{q:"Để tăng cường an toàn dữ liệu, quyền truy cập mặc định đối với người dùng không cần thiết nên được thiết lập như thế nào?", a:["Toàn quyền truy cập","Quyền đọc và ghi","Quyền quản trị","Không cấp quyền truy cập"], c:3, e:"Theo nguyên tắc đặc quyền tối thiểu (least privilege), người dùng chỉ nên được cấp những quyền thực sự cần thiết. Nếu không cần truy cập thì mặc định không cấp quyền."},
+{q:"Một phương pháp tấn công phổ biến đối với hệ mật mã đối xứng là:", a:["Phishing","SQL Injection","Social Engineering","Brute Force"], c:3, e:"Brute Force là thử lần lượt các khóa có thể có cho đến khi tìm được khóa đúng. Đây là phương pháp tấn công trực tiếp vào không gian khóa và có thể áp dụng với hệ mật mã đối xứng."},
+{q:"“Chặn bắt thông tin” trong an toàn thông tin thuộc loại hình tấn công nào?", a:["Interruption","Modification","Fabrication","Interception"], c:3, e:"Interception là hành vi một bên không được phép tiếp cận hoặc thu thập thông tin. Đây chính là dạng “chặn bắt/đánh cắp thông tin” trong mô hình các loại tấn công."},
+{q:"Đặc điểm của tấn công bị động (Passive Attack) là:", a:["Theo dõi hoặc thu thập thông tin mà không làm thay đổi dữ liệu","Làm thay đổi dữ liệu","Làm gián đoạn hệ thống","Tạo dữ liệu giả"], c:0, e:"Tấn công bị động chủ yếu nghe lén, quan sát hoặc thu thập thông tin mà không thay đổi nội dung dữ liệu. Eavesdropping và traffic analysis là các ví dụ điển hình."},
+{q:"Biện pháp nào giúp ngăn chặn các truy cập không mong muốn vào máy tính hoặc mạng?", a:["Antivirus","Backup","Encryption","Firewall"], c:3, e:"Firewall kiểm soát lưu lượng mạng theo các quy tắc cho phép hoặc từ chối kết nối, từ đó giúp ngăn chặn nhiều truy cập không mong muốn."},
+{q:"Theo Luật An ninh mạng, “an ninh mạng” được hiểu là:", a:["Việc bảo vệ máy tính cá nhân khỏi virus","Sự bảo đảm hoạt động trên không gian mạng không gây phương hại đến an ninh quốc gia, trật tự, an toàn xã hội và quyền, lợi ích hợp pháp của cơ quan, tổ chức, cá nhân","Việc sử dụng mật khẩu mạnh","Việc mã hóa tất cả dữ liệu trên Internet"], c:1, e:"Đáp án B là nội dung định nghĩa “an ninh mạng” theo Luật An ninh mạng 2018: bảo đảm hoạt động trên không gian mạng không gây phương hại đến an ninh quốc gia, trật tự, an toàn xã hội và quyền, lợi ích hợp pháp của cơ quan, tổ chức, cá nhân."},
+{q:"Công nghệ nào sau đây được sử dụng để bảo vệ thông tin ở tầng IP?", a:["IPSec","HTTP","FTP","SMTP"], c:0, e:"IPSec (Internet Protocol Security) cung cấp các cơ chế bảo mật ở tầng IP, gồm xác thực nguồn gốc, toàn vẹn và bảo mật dữ liệu tùy chế độ/cấu hình. HTTP, FTP và SMTP là các giao thức ở các tầng cao hơn."},
+{q:"Đâu không phải là một dạng tấn công chủ động?", a:["Modification","Fabrication","Eavesdropping","Interruption"], c:2, e:"Eavesdropping (nghe lén) là tấn công bị động vì chủ yếu quan sát/thu thập thông tin. Modification, Fabrication và Interruption đều tác động hoặc làm thay đổi hoạt động/dữ liệu nên thuộc nhóm chủ động."},
+{q:"Trong hệ mã Feistel, việc sử dụng khóa có kích thước lớn hơn chủ yếu nhằm mục đích:", a:["Làm giảm số vòng mã hóa","Làm cho thuật toán đơn giản hơn","Tăng khả năng chống tấn công vét cạn","Làm giảm độ an toàn"], c:2, e:"Khóa dài hơn làm tăng không gian khóa, khiến số lượng khả năng phải thử bằng brute force tăng lên rất lớn. Do đó nó chủ yếu tăng khả năng chống vét cạn."},
+{q:"“Ngăn chặn thông tin” trong mô hình các loại hình tấn công an toàn thông tin tương ứng với:", a:["Interception","Modification","Fabrication","Interruption"], c:3, e:"Interruption là tấn công làm gián đoạn hoặc ngăn cản việc cung cấp/tiếp cận tài nguyên hay thông tin. Interception là chặn bắt/thu thập thông tin."},
+{q:"Một hệ thống kiểm tra mật khẩu bị rò rỉ sử dụng kỹ thuật k-anonymity. Người dùng gửi phần đầu của giá trị băm mật khẩu đến máy chủ, sau đó kiểm tra phần còn lại ở phía máy khách. Cách hoạt động này nhằm:", a:["Giúp kiểm tra mật khẩu bị lộ mà không gửi toàn bộ giá trị băm lên máy chủ","Gửi trực tiếp mật khẩu cho máy chủ","Lưu mật khẩu dưới dạng văn bản rõ","Giải mã mật khẩu trên máy chủ"], c:0, e:"Mục tiêu là giảm lượng thông tin nhạy cảm gửi lên máy chủ. Với mô hình k-anonymity kiểu này, máy khách gửi một phần tiền tố của hash; máy chủ trả về các hash ứng với tiền tố đó, rồi máy khách tự đối chiếu phần còn lại. Mật khẩu đầy đủ không được gửi lên máy chủ."},
+{q:"Tấn công đoán mật khẩu dựa trên các mẫu như “123456”, “password123”, ngày sinh hoặc tên người dùng được gọi là:", a:["Brute Force ngẫu nhiên","Pattern-based Guessing","Rainbow Table","Dictionary Encryption"], c:1, e:"Pattern-based guessing khai thác các mẫu mà con người thường dùng khi đặt mật khẩu, như chuỗi số đơn giản, từ phổ biến, tên và ngày tháng. Nó thông minh hơn việc thử hoàn toàn ngẫu nhiên."},
+{q:"Rainbow Table là gì?", a:["Một thuật toán mã hóa dữ liệu","Một loại virus máy tính","Bảng chứa trước các giá trị băm để hỗ trợ việc tìm ngược mật khẩu","Một phương pháp tạo khóa công khai"], c:2, e:"Rainbow table là cấu trúc dữ liệu chứa các chuỗi giá trị được tính trước để hỗ trợ đảo ngược hash của các mật khẩu yếu/không có salt phù hợp. Salt riêng cho từng mật khẩu làm rainbow table dùng chung kém hiệu quả."},
+{q:"Việc sử dụng Salt kết hợp với SHA-256 để lưu mật khẩu vẫn chưa đủ hiệu quả để chống tấn công vét cạn vì:", a:["SHA-256 không tạo ra giá trị băm","Salt làm mật khẩu dễ đoán hơn","SHA-256 là hàm băm nhanh, nên kẻ tấn công vẫn có thể thử rất nhiều mật khẩu","Salt không thể kết hợp với hàm băm"], c:2, e:"Salt giúp chống rainbow table và khiến mỗi mật khẩu có hash khác nhau, nhưng SHA-256 là hàm băm mật mã rất nhanh. Khi lưu mật khẩu, nên dùng hàm dẫn xuất khóa chậm và có thiết kế chuyên cho password như Argon2id, scrypt hoặc bcrypt (tùy yêu cầu hệ thống), thay vì chỉ SHA-256."}
+];
+
+const quiz = document.getElementById("quiz");
+const scoreEl = document.getElementById("score");
+const answeredEl = document.getElementById("answered");
+const bar = document.getElementById("bar");
+const final = document.getElementById("final");
+
+function render(){
+  quiz.innerHTML = questions.map((x,i)=>`
+    <section class="question" id="q${i}">
+      <div class="q-title">Câu ${i+1}. ${x.q}</div>
+      <div class="options">
+        ${x.a.map((opt,j)=>`
+          <label class="option" data-q="${i}" data-a="${j}">
+            <input type="radio" name="q${i}" value="${j}">
+            <span><b>${String.fromCharCode(65+j)}.</b> ${opt}</span>
+          </label>`).join("")}
+      </div>
+      <div class="feedback" id="f${i}"></div>
+    </section>`).join("");
+
+  document.querySelectorAll(".option").forEach(el=>{
+    el.addEventListener("click",()=>{
+      const i=+el.dataset.q, j=+el.dataset.a;
+      check(i,j);
+    });
+  });
+  update();
+}
+
+function check(i,j){
+  const q=questions[i];
+  document.querySelectorAll(`[data-q="${i}"]`).forEach(o=>{
+    o.classList.remove("correct","wrong");
+    if(+o.dataset.a===q.c) o.classList.add("correct");
+  });
+  if(j!==q.c) document.querySelector(`[data-q="${i}"][data-a="${j}"]`).classList.add("wrong");
+  const f=document.getElementById("f"+i);
+  const ok=j===q.c;
+  f.className="feedback show "+(ok?"ok":"bad");
+  f.innerHTML=`<strong>${ok?"✅ Chính xác!":"❌ Chưa đúng."}</strong>
+    <div><b>Đáp án:</b> ${String.fromCharCode(65+q.c)}. ${q.a[q.c]}</div>
+    <div class="explain"><b>Giải thích:</b> ${q.e}</div>`;
+  update();
+}
+
+function update(){
+  let answered=0, correct=0;
+  questions.forEach((q,i)=>{
+    const checked=document.querySelector(`input[name="q${i}"]:checked`);
+    if(checked){answered++; if(+checked.value===q.c)correct++;}
+  });
+  scoreEl.textContent=`${correct}/${questions.length}`;
+  answeredEl.textContent=`${answered} đã làm`;
+  bar.style.width=(answered/questions.length*100)+"%";
+  if(answered===questions.length){
+    final.classList.add("show");
+    final.innerHTML=`<h2>🎉 Hoàn thành!</h2><p>Bạn đúng <b>${correct}/${questions.length}</b> câu (${Math.round(correct/questions.length*100)}%).</p>
+    <p class="small">Lưu ý: một vài câu Hill/Caesar/RSA trong bộ đề có dấu hiệu không khớp giữa phép tính chuẩn và các lựa chọn. Lời giải trong từng câu đã đánh dấu để bạn tránh học sai.</p>`;
+  } else final.classList.remove("show");
+}
+
+document.getElementById("showAll").onclick=()=>{
+  questions.forEach((q,i)=>{
+    document.querySelectorAll(`[data-q="${i}"]`).forEach(o=>{
+      if(+o.dataset.a===q.c)o.classList.add("correct");
+    });
+    const f=document.getElementById("f"+i);
+    f.className="feedback show ok";
+    f.innerHTML=`<strong>Đáp án: ${String.fromCharCode(65+q.c)}. ${q.a[q.c]}</strong><div class="explain"><b>Giải thích:</b> ${q.e}</div>`;
+  });
+};
+document.getElementById("hideAnswers").onclick=()=>{
+  questions.forEach((q,i)=>{
+    const f=document.getElementById("f"+i);
+    f.className="feedback";
+    document.querySelectorAll(`[data-q="${i}"]`).forEach(o=>o.classList.remove("correct","wrong"));
+  });
+};
+document.getElementById("reset").onclick=()=>{
+  render();
+  window.scrollTo({top:0,behavior:"smooth"});
+};
+render();
+</script>
+</body>
+</html>
+'''
+
+path = Path("/mnt/data/on_tap_an_toan_thong_tin_mat_ma.html")
+path.write_text(html, encoding="utf-8")
+print(path)
